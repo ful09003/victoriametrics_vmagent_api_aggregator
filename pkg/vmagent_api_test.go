@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"net/http"
+	"sync"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -64,6 +65,65 @@ func TestVMAgentAPICollector_Collect(t *testing.T) {
 			got, err := v.Collect()
 			assert.Equal(t, err, tt.wantErr)
 			assert.DeepEqual(t, got, tt.want)
+		})
+	}
+}
+
+func TestVMAgentAPICollection_CollectAll(t *testing.T) {
+	srv, req := genTestHappyPathServerReq(t)
+	defer srv.Close()
+
+	type fields struct {
+		m    *sync.Mutex
+		c    map[string]*VMAgentAPICollector
+		data map[string]VMAgentAPIResponse
+	}
+	tests := []struct {
+		name       string
+		fields     fields
+		wantErrLen int
+	}{
+		{
+			name: "happy path",
+			fields: fields{
+				m: &sync.Mutex{},
+				c: map[string]*VMAgentAPICollector{
+					"local": &VMAgentAPICollector{
+						origEndpoint: req.URL.String(),
+						c:            http.DefaultClient,
+					},
+				},
+				data: map[string]VMAgentAPIResponse{},
+			},
+			wantErrLen: 0,
+		},
+		{
+			name: "happy path with a broken vmagent",
+			fields: fields{
+				m: &sync.Mutex{},
+				c: map[string]*VMAgentAPICollector{
+					"happy": &VMAgentAPICollector{
+						origEndpoint: req.URL.String(),
+						c:            http.DefaultClient,
+					},
+					"sad": &VMAgentAPICollector{
+						origEndpoint: "busted",
+						c:            http.DefaultClient,
+					},
+				},
+				data: map[string]VMAgentAPIResponse{},
+			},
+			wantErrLen: 1,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := &VMAgentAPICollection{
+				m:    tt.fields.m,
+				c:    tt.fields.c,
+				data: tt.fields.data,
+			}
+			assert.Equal(t, len(v.CollectAll()), tt.wantErrLen)
 		})
 	}
 }

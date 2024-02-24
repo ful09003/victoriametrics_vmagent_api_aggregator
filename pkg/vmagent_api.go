@@ -2,9 +2,11 @@ package pkg
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 )
 
@@ -33,7 +35,7 @@ func fetchVMAgentTargets(c *http.Client, r *http.Request) (VMAgentAPIResponse, e
 
 	resp, err := c.Do(r)
 	if err != nil {
-		return vmRes, nil
+		return vmRes, err
 	}
 	resBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -69,4 +71,59 @@ func (v *VMAgentAPICollector) Collect() (VMAgentAPIResponse, error) {
 	}
 	req := &http.Request{URL: u}
 	return fetchVMAgentTargets(v.c, req)
+}
+
+type VMAgentAPICollection struct {
+	m    *sync.Mutex
+	c    map[string]*VMAgentAPICollector
+	data map[string]VMAgentAPIResponse
+}
+
+// NewVMAgentCollection initializes a new VMAgentAPICollection, used to hold data from multiple vmagent APIs
+func NewVMAgentCollection(endpoints []string) (*VMAgentAPICollection, error) {
+	c := &VMAgentAPICollection{
+		m: &sync.Mutex{},
+		c: map[string]*VMAgentAPICollector{},
+	}
+	for _, e := range endpoints {
+		collector, err := NewVMAgentAPICollector(e, http.DefaultClient)
+		if err != nil {
+			return c, err
+		}
+		c.c[e] = collector
+	}
+
+	return c, nil
+}
+
+type VMAgentAPICollectionError struct {
+	endpoint string
+	err      error
+}
+
+func (e VMAgentAPICollectionError) Error() string {
+	return fmt.Sprintf("[%s]: %s", e.endpoint, e.err)
+}
+
+func (e VMAgentAPICollectionError) Unwrap() error {
+	return e.err
+}
+
+func (v *VMAgentAPICollection) CollectAll() []error {
+	errs := make([]error, 0)
+	for endpoint, collector := range v.c {
+		d, err := collector.Collect()
+		if err != nil {
+			errs = append(errs, VMAgentAPICollectionError{
+				endpoint: endpoint,
+				err:      err,
+			})
+		}
+
+		v.m.Lock()
+		v.data[endpoint] = d
+		v.m.Unlock()
+	}
+
+	return errs
 }

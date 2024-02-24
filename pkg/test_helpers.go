@@ -3,7 +3,7 @@ package pkg
 import (
 	"net/http"
 	"net/http/httptest"
-	url2 "net/url"
+	"net/url"
 	"testing"
 	"time"
 
@@ -51,15 +51,13 @@ func happyResponse() VMAgentAPIResponse {
 func genTestHappyPathServerReq(t *testing.T) (*httptest.Server, *http.Request) {
 	t.Helper()
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		written, err := w.Write([]byte(happySampleText))
-		assert.NilError(t, err)
-		assert.Assert(t, written > 0)
+		_, _ = w.Write([]byte(happySampleText))
 	}
 
 	http.HandleFunc("/happy", handler)
 	srv := httptest.NewServer(http.DefaultServeMux)
-	url, err := url2.Parse(srv.URL + "/happy")
+	u, err := url.Parse(srv.URL + "/happy")
 	assert.NilError(t, err)
 
-	return srv, &http.Request{URL: url}
+	return srv, &http.Request{URL: u}
 }
