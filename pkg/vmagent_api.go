@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -44,4 +45,28 @@ func fetchVMAgentTargets(c *http.Client, r *http.Request) (VMAgentAPIResponse, e
 	}
 
 	return vmRes, nil
+}
+
+type VMAgentAPICollector struct {
+	origEndpoint string
+	c            *http.Client
+}
+
+// NewVMAgentAPICollector returns a collector for a vmagent API endpoint. It is expected that the full URL to
+// the vmagent targets API is provided
+func NewVMAgentAPICollector(s string, c *http.Client) (*VMAgentAPICollector, error) {
+	return &VMAgentAPICollector{
+		origEndpoint: s,
+		c:            c,
+	}, nil
+}
+
+// Collect returns a vmagent API response
+func (v *VMAgentAPICollector) Collect() (VMAgentAPIResponse, error) {
+	u, err := url.Parse(v.origEndpoint)
+	if err != nil {
+		return VMAgentAPIResponse{}, err
+	}
+	req := &http.Request{URL: u}
+	return fetchVMAgentTargets(v.c, req)
 }
