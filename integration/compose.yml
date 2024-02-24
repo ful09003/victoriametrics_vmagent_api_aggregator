@@ -1,0 +1,43 @@
+# Simulates an extremely tiny vmagent fleet
+---
+services:
+  nodeexporter:
+    container_name: nodeexporter
+    image: quay.io/prometheus/node-exporter:latest
+    command:
+      - '--path.rootfs=/host'
+    networks:
+      - int_net
+    pid: host
+    restart: unless-stopped
+    volumes:
+      - '/:/host:ro,rslave'
+  vmagent1:
+    image: victoriametrics/vmagent:v${VMAGENTVER:-1.93.12}
+    command: -envflag.enable -envflag.prefix="VM_"
+    environment:
+      VM_remoteWrite_url: "http://127.0.0.1:9999"
+      VM_promscrape_config: "/prometheus.yml"
+      VM_loggerLevel: "PANIC"
+    networks:
+      - int_net
+    ports:
+      - "8429:8429"
+    volumes:
+      - "${PWD}/prometheus.yml:/prometheus.yml:ro"
+  vmagent2:
+    image: victoriametrics/vmagent:v${VMAGENTVER:-1.93.12}
+    command: -envflag.enable -envflag.prefix="VM_"
+    environment:
+      VM_remoteWrite_url: "http://127.0.0.1:9999"
+      VM_promscrape_config: "/prometheus.yml"
+      VM_loggerLevel: "PANIC"
+    networks:
+      - int_net
+    ports:
+      - "8430:8429"
+    volumes:
+      - "${PWD}/prometheus.yml:/prometheus.yml:ro"
+
+networks:
+  int_net:
