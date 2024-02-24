@@ -13,7 +13,7 @@ type VMAgentAPITarget struct {
 	ScrapeURL          string            `json:"scrapeUrl"`
 	LastError          string            `json:"lastError"`
 	LastScrape         time.Time         `json:"lastScrape"`
-	LastScrapeDuration int               `json:"lastScrapeDuration"`
+	LastScrapeDuration float64           `json:"lastScrapeDuration"`
 	LastSamplesScraped int               `json:"lastSamplesScraped"`
 	Health             string            `json:"health"`
 }
