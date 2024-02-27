@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"gotest.tools/v3/assert"
+
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func Test_fetchVMAgentTargets(t *testing.T) {
@@ -124,6 +126,44 @@ func TestVMAgentAPICollection_CollectAll(t *testing.T) {
 				data: tt.fields.data,
 			}
 			assert.Equal(t, len(v.CollectAll()), tt.wantErrLen)
+		})
+	}
+}
+
+func TestNewVMAgentCollection(t *testing.T) {
+	type args struct {
+		endpoints []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *VMAgentAPICollection
+		wantErr bool
+	}{
+		{
+			name: "happy path",
+			args: args{
+				endpoints: []string{"http://localhost:1234"},
+			},
+			want: &VMAgentAPICollection{
+				m: &sync.Mutex{},
+				c: map[string]*VMAgentAPICollector{
+					"http://localhost:1234": {},
+				},
+				data: map[string]VMAgentAPIResponse{},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := NewVMAgentCollection(tt.args.endpoints)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewVMAgentCollection() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			assert.DeepEqual(t, got, tt.want, cmpopts.IgnoreUnexported(VMAgentAPICollection{}))
+
 		})
 	}
 }

@@ -82,8 +82,9 @@ type VMAgentAPICollection struct {
 // NewVMAgentCollection initializes a new VMAgentAPICollection, used to hold data from multiple vmagent APIs
 func NewVMAgentCollection(endpoints []string) (*VMAgentAPICollection, error) {
 	c := &VMAgentAPICollection{
-		m: &sync.Mutex{},
-		c: map[string]*VMAgentAPICollector{},
+		m:    &sync.Mutex{},
+		c:    map[string]*VMAgentAPICollector{},
+		data: make(map[string]VMAgentAPIResponse),
 	}
 	for _, e := range endpoints {
 		collector, err := NewVMAgentAPICollector(e, http.DefaultClient)
@@ -113,15 +114,16 @@ func (v *VMAgentAPICollection) CollectAll() []error {
 	errs := make([]error, 0)
 	for endpoint, collector := range v.c {
 		d, err := collector.Collect()
+		v.m.Lock()
 		if err != nil {
+			v.data[endpoint] = VMAgentAPIResponse{}
 			errs = append(errs, VMAgentAPICollectionError{
 				endpoint: endpoint,
 				err:      err,
 			})
+		} else {
+			v.data[endpoint] = d
 		}
-
-		v.m.Lock()
-		v.data[endpoint] = d
 		v.m.Unlock()
 	}
 
