@@ -19,13 +19,8 @@ var (
 func main() {
 	flag.Parse()
 	disco := newDiscovery(*flagVMAgentTargets)
-	endpoints, err := disco.DiscoverEndpoints()
-	if err != nil {
-		log.Println(err)
-		os.Exit(1)
-	}
 
-	collection, err := pkg.NewVMAgentCollection(endpoints)
+	collection, err := pkg.NewVMAgentCollection(disco)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)

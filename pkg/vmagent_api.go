@@ -80,11 +80,15 @@ type VMAgentAPICollection struct {
 }
 
 // NewVMAgentCollection initializes a new VMAgentAPICollection, used to hold data from multiple vmagent APIs
-func NewVMAgentCollection(endpoints []string) (*VMAgentAPICollection, error) {
+func NewVMAgentCollection(discovery VMAgentDiscoverer) (*VMAgentAPICollection, error) {
 	c := &VMAgentAPICollection{
 		m:    &sync.Mutex{},
 		c:    map[string]*VMAgentAPICollector{},
 		data: make(map[string]VMAgentAPIResponse),
+	}
+	endpoints, err := discovery.DiscoverEndpoints()
+	if err != nil {
+		return nil, err
 	}
 	for _, e := range endpoints {
 		collector, err := NewVMAgentAPICollector(e, http.DefaultClient)
