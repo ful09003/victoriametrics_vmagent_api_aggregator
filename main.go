@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	flagVMAgentTargets       = flag.String("targetdiscovery", "VAA_", "location to watch for target discovery. accepts a file path or prefix for env var")
+	flagVMAgentTargets       = flag.String("targetdiscovery", "", "file path containing targets or name of env var to reference")
 	flagTargetsWatchInterval = flag.Duration("discoveryinterval", 10*time.Second, "duration to update discovered targets list")
 )
 
