@@ -80,11 +80,15 @@ type VMAgentAPICollection struct {
 }
 
 // NewVMAgentCollection initializes a new VMAgentAPICollection, used to hold data from multiple vmagent APIs
-func NewVMAgentCollection(endpoints []string) (*VMAgentAPICollection, error) {
+func NewVMAgentCollection(discovery VMAgentDiscoverer) (*VMAgentAPICollection, error) {
 	c := &VMAgentAPICollection{
 		m:    &sync.Mutex{},
 		c:    map[string]*VMAgentAPICollector{},
 		data: make(map[string]VMAgentAPIResponse),
+	}
+	endpoints, err := discovery.DiscoverEndpoints()
+	if err != nil {
+		return nil, err
 	}
 	for _, e := range endpoints {
 		collector, err := NewVMAgentAPICollector(e, http.DefaultClient)
@@ -128,4 +132,36 @@ func (v *VMAgentAPICollection) CollectAll() []error {
 	}
 
 	return errs
+}
+
+// Reconcile accepts a list of new endpoints a VMAgentAPICollection should track.
+// New entries are added to the collection, while endpoints in the VMAgentAPICollection but not in the new list are removed
+func (v *VMAgentAPICollection) Reconcile(newEndpoints []string) error {
+	v.m.Lock()
+	defer v.m.Unlock()
+	newCollectors := map[string]struct{}{}
+
+	for _, e := range newEndpoints {
+		newCollectors[e] = struct{}{}
+	}
+
+	for e, _ := range v.c {
+		// If existing collectors map contains an endpoint not in new collectors, remove it
+		if _, exists := newCollectors[e]; !exists {
+			delete(v.c, e)
+			delete(v.data, e)
+		}
+	}
+	for e, _ := range newCollectors {
+		// If new collection contains an entry not in existing, add it
+		if _, exists := v.c[e]; !exists {
+			newCollector, err := NewVMAgentAPICollector(e, http.DefaultClient)
+			if err != nil {
+				return err
+			}
+			v.c[e] = newCollector
+			v.data[e] = VMAgentAPIResponse{}
+		}
+	}
+	return nil
 }

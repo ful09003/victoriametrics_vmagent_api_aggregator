@@ -132,7 +132,7 @@ func TestVMAgentAPICollection_CollectAll(t *testing.T) {
 
 func TestNewVMAgentCollection(t *testing.T) {
 	type args struct {
-		endpoints []string
+		disco VMAgentDiscoverer
 	}
 	tests := []struct {
 		name    string
@@ -143,7 +143,7 @@ func TestNewVMAgentCollection(t *testing.T) {
 		{
 			name: "happy path",
 			args: args{
-				endpoints: []string{"http://localhost:1234"},
+				disco: &StaticMemDiscovery{e: []string{"http://localhost:1234"}},
 			},
 			want: &VMAgentAPICollection{
 				m: &sync.Mutex{},
@@ -157,7 +157,7 @@ func TestNewVMAgentCollection(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewVMAgentCollection(tt.args.endpoints)
+			got, err := NewVMAgentCollection(tt.args.disco)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewVMAgentCollection() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -166,4 +166,21 @@ func TestNewVMAgentCollection(t *testing.T) {
 
 		})
 	}
+}
+
+func TestVMAgentAPICollection_Reconcile(t *testing.T) {
+	collection := &VMAgentAPICollection{
+		m: &sync.Mutex{},
+		c: map[string]*VMAgentAPICollector{
+			"http://localhost:1234": &VMAgentAPICollector{},
+			"http://localhost:2345": &VMAgentAPICollector{},
+		},
+		data: map[string]VMAgentAPIResponse{},
+	}
+	err := collection.Reconcile([]string{"http://localhost:1234", "http://localhost:4567"})
+	assert.NilError(t, err)
+	assert.DeepEqual(t, collection.c, map[string]*VMAgentAPICollector{
+		"http://localhost:1234": &VMAgentAPICollector{},
+		"http://localhost:4567": &VMAgentAPICollector{},
+	}, cmpopts.IgnoreUnexported(VMAgentAPICollection{}), cmpopts.IgnoreUnexported(VMAgentAPICollector{}))
 }
