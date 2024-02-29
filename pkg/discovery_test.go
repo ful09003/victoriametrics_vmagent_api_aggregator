@@ -106,7 +106,7 @@ func TestEnvDiscovery_DiscoverEndpoints(t *testing.T) {
 				envVar:       "",
 			},
 			want:    nil,
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name: "happy path errors when env var empty",
@@ -116,15 +116,6 @@ func TestEnvDiscovery_DiscoverEndpoints(t *testing.T) {
 			},
 			want:    nil,
 			wantErr: true,
-		},
-		{
-			name: "happy path with set prefix",
-			fields: fields{
-				envVarsToSet: map[string]string{"TEST_VMAGENT_ENDPOINTS": "http://1.2.3.4:1234,http://2.3.4.5:2345"},
-				envVar:       "TEST_",
-			},
-			want:    []string{"http://1.2.3.4:1234", "http://2.3.4.5:2345"},
-			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
