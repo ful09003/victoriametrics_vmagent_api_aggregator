@@ -134,6 +134,10 @@ func (v *VMAgentAPICollection) CollectAll() []error {
 	return errs
 }
 
+func (v *VMAgentAPICollection) Data() map[string]VMAgentAPIResponse {
+	return v.data
+}
+
 // Reconcile accepts a list of new endpoints a VMAgentAPICollection should track.
 // New entries are added to the collection, while endpoints in the VMAgentAPICollection but not in the new list are removed
 func (v *VMAgentAPICollection) Reconcile(newEndpoints []string) error {
