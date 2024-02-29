@@ -54,6 +54,14 @@ func (f *FileDiscovery) DiscoverEndpoints() ([]string, error) {
 	return strings.Split(strings.TrimSpace(string(b)), ","), nil
 }
 
+type StaticMemDiscovery struct {
+	e []string
+}
+
+func (s *StaticMemDiscovery) DiscoverEndpoints() ([]string, error) {
+	return s.e, nil
+}
+
 func gatherEnvVars(inEnv []string, k []string) map[string]string {
 	ret := make(map[string]string)
 	for _, desiredKey := range k {
