@@ -167,3 +167,20 @@ func TestNewVMAgentCollection(t *testing.T) {
 		})
 	}
 }
+
+func TestVMAgentAPICollection_Reconcile(t *testing.T) {
+	collection := &VMAgentAPICollection{
+		m: &sync.Mutex{},
+		c: map[string]*VMAgentAPICollector{
+			"http://localhost:1234": &VMAgentAPICollector{},
+			"http://localhost:2345": &VMAgentAPICollector{},
+		},
+		data: map[string]VMAgentAPIResponse{},
+	}
+	err := collection.Reconcile([]string{"http://localhost:1234", "http://localhost:4567"})
+	assert.NilError(t, err)
+	assert.DeepEqual(t, collection.c, map[string]*VMAgentAPICollector{
+		"http://localhost:1234": &VMAgentAPICollector{},
+		"http://localhost:4567": &VMAgentAPICollector{},
+	}, cmpopts.IgnoreUnexported(VMAgentAPICollection{}), cmpopts.IgnoreUnexported(VMAgentAPICollector{}))
+}
